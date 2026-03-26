@@ -135,6 +135,9 @@ def detect_intent(message: str, case_context: dict[str, Any] | None = None) -> d
     elif "tor" in text or "dark web" in text:
         intent = "ipdr"
         query_type = "tor_usage"
+    elif "trace ip activity" in text or ("ip activity" in text and "across" in text):
+        intent = "ipdr"
+        query_type = "cross_dataset_ip_activity"
     elif "encrypted messaging" in text or "whatsapp" in text or "telegram" in text or "signal" in text:
         intent = "ipdr"
         query_type = "encrypted_apps"
@@ -166,15 +169,21 @@ def detect_intent(message: str, case_context: dict[str, Any] | None = None) -> d
         query_type = "calls_to_entity"
         relationship_direction = "incoming"
         requires_entity = True
+    elif "top phone number" in text or "top phone numbers" in text or ("phone numbers" in text and any(token in text for token in ["top", "most", "active", "highest"])):
+        intent = "frequency"
+        query_type = "top_phone_numbers"
     elif "most calls overall" in text or "call frequency" in text or "made the most calls" in text:
         intent = "cdr"
         query_type = "cdr_top_callers"
+    elif "calls between" in text and len(extracted_entities) >= 2:
+        intent = "cdr"
+        query_type = "cdr_pair_history_night" if any(token in text for token in ["night", "late", "midnight"]) else "cdr_pair_history"
+    elif "night" in text and "call" in text:
+        intent = "cdr"
+        query_type = "cdr_night_calls"
     elif ("calls made between" in text and ("pm" in text or "am" in text)) or "night-time communication" in text:
         intent = "cdr"
         query_type = "cdr_night_calls"
-    elif "calls between" in text and len(extracted_entities) >= 2:
-        intent = "cdr"
-        query_type = "cdr_pair_history"
     elif "day-by-day" in text or "weekly pattern" in text or "weekday pattern" in text:
         intent = "cdr"
         query_type = "cdr_day_week_patterns"
@@ -252,4 +261,5 @@ def detect_intent(message: str, case_context: dict[str, Any] | None = None) -> d
         "used_context": used_context,
         "is_follow_up": uses_context_reference or used_context or "show more" in text,
         "burner_requested": burner_requested,
+        "night_filter": any(token in text for token in ["night", "late", "midnight"]),
     }

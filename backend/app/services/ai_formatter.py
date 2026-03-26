@@ -7,10 +7,10 @@ from typing import Any
 from openai import OpenAI
 
 
-def _resolve_client() -> tuple[OpenAI | None, str]:
+def _resolve_client() -> tuple[OpenAI | None, str, str]:
     api_key = os.getenv("AI_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("OPENROUTER_API_KEY")
     if not api_key:
-        return None, ""
+        return None, "", "none"
 
     base_url = os.getenv("AI_BASE_URL")
     if not base_url and api_key.startswith("sk-or-v1"):
@@ -21,13 +21,23 @@ def _resolve_client() -> tuple[OpenAI | None, str]:
         model = "gpt-4.1-mini" if not base_url else "openrouter/free"
 
     client = OpenAI(api_key=api_key, base_url=base_url or None)
-    return client, model
+    provider = "openrouter" if (base_url and "openrouter.ai" in base_url) or api_key.startswith("sk-or-v1") else "openai"
+    return client, model, provider
 
 
-def enhance_response_card(card: dict[str, Any], intent: str, user_message: str, structured_result: dict[str, Any]) -> dict[str, Any]:
-    client, model = _resolve_client()
+def enhance_response_card(
+    card: dict[str, Any], intent: str, user_message: str, structured_result: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    client, model, provider = _resolve_client()
     if not client:
-        return card
+        metadata = {
+            "ai_used": False,
+            "ai_provider": provider,
+            "ai_model": model or None,
+            "ai_error": "AI_API_KEY is not configured on the backend.",
+        }
+        card.update(metadata)
+        return card, metadata
 
     try:
         prompt = f"""
@@ -68,6 +78,15 @@ Structured result:
         for key in ["direct_answer", "analysis", "insight", "recommended_action"]:
             if isinstance(parsed.get(key), str) and parsed[key].strip():
                 card[key] = parsed[key].strip()
-        return card
-    except Exception:
-        return card
+        metadata = {"ai_used": True, "ai_provider": provider, "ai_model": model, "ai_error": None}
+        card.update(metadata)
+        return card, metadata
+    except Exception as exc:
+        metadata = {
+            "ai_used": False,
+            "ai_provider": provider,
+            "ai_model": model or None,
+            "ai_error": f"{type(exc).__name__}: {exc}",
+        }
+        card.update(metadata)
+        return card, metadata

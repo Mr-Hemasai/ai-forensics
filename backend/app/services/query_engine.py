@@ -6,6 +6,7 @@ from app.core.store import CaseRecord, default_case_context
 from app.services.ai_formatter import enhance_response_card
 from app.services.analysis import (
     analyze_frequency,
+    analyze_phone_number_frequency,
     build_case_profile,
     detect_entity_time_patterns,
     detect_outliers,
@@ -25,6 +26,7 @@ from app.services.forensic_analytics import (
     analyze_cdr_pair_history,
     analyze_ipdr_encrypted_apps,
     analyze_ipdr_suspicious_ips,
+    trace_ip_activity_across_datasets,
     analyze_ipdr_tor_usage,
     analyze_ipdr_upload_download_anomalies,
     analyze_ipdr_vpn_usage,
@@ -164,8 +166,14 @@ def run_query(case_record: CaseRecord, message: str) -> dict[str, Any]:
         structured_result = analyze_cdr_calls_to_entity(datasets, entity)
     elif query_type == "cdr_night_calls":
         structured_result = analyze_cdr_night_calls(datasets)
+    elif query_type == "top_phone_numbers":
+        structured_result = analyze_phone_number_frequency(datasets)
+    elif query_type == "cross_dataset_ip_activity":
+        structured_result = trace_ip_activity_across_datasets(datasets)
     elif query_type == "cdr_pair_history" and len(entities) >= 2:
         structured_result = analyze_cdr_pair_history(datasets, entities[0], entities[1])
+    elif query_type == "cdr_pair_history_night" and len(entities) >= 2:
+        structured_result = analyze_cdr_pair_history(datasets, entities[0], entities[1], night_only=True)
     elif query_type == "cdr_day_week_patterns":
         if len(entities) >= 2:
             structured_result = analyze_cdr_day_week_patterns(datasets, pair=(entities[0], entities[1]))
@@ -238,7 +246,7 @@ def run_query(case_record: CaseRecord, message: str) -> dict[str, Any]:
         structured_result.setdefault("outlier_snapshot", outliers.get("outliers", []))
 
     response_card = build_response_card(intent, message, structured_result, case_profile, focus_entity=entity)
-    response_card = enhance_response_card(response_card, intent, message, structured_result)
+    response_card, ai_metadata = enhance_response_card(response_card, intent, message, structured_result)
     if context_used:
         response_card["context_used"] = context_used
     reply = response_card_to_text(response_card)
@@ -257,4 +265,8 @@ def run_query(case_record: CaseRecord, message: str) -> dict[str, Any]:
         "reply": reply,
         "case_profile": case_profile,
         "observation_items": case_record.observation_items,
+        "ai_used": ai_metadata["ai_used"],
+        "ai_provider": ai_metadata["ai_provider"],
+        "ai_model": ai_metadata["ai_model"],
+        "ai_error": ai_metadata["ai_error"],
     }

@@ -56,3 +56,7 @@ class QueryResponse(BaseModel):
     case_profile: dict[str, Any]
     observation_items: list[str]
     chat_history: list[ChatMessage]
+    ai_used: bool = False
+    ai_provider: Optional[str] = None
+    ai_model: Optional[str] = None
+    ai_error: Optional[str] = None

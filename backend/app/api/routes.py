@@ -138,6 +138,10 @@ def query_case(payload: QueryRequest) -> QueryResponse:
         case_profile=_json_safe(result["case_profile"]),
         observation_items=_json_safe(result["observation_items"]),
         chat_history=_json_safe(case_record.chat_history),
+        ai_used=bool(result.get("ai_used")),
+        ai_provider=_json_safe(result.get("ai_provider")),
+        ai_model=_json_safe(result.get("ai_model")),
+        ai_error=_json_safe(result.get("ai_error")),
     )
 
 

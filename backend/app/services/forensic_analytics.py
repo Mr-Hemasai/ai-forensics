@@ -5,9 +5,10 @@ from datetime import timedelta
 from statistics import median
 from typing import Any
 import re
-import warnings
 
 import pandas as pd
+
+from app.services.datetime_utils import coerce_datetime
 
 
 VPN_KEYWORDS = {"vpn", "nordvpn", "expressvpn", "protonvpn", "surfshark", "wireguard", "openvpn"}
@@ -56,9 +57,7 @@ MONTH_MAP = {
 
 
 def _coerce_datetime(series: pd.Series) -> pd.Series:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        return pd.to_datetime(series, errors="coerce")
+    return coerce_datetime(series)
 
 
 def _dataset_profiles(dataset: dict[str, Any]) -> list[dict[str, Any]]:
@@ -512,7 +511,34 @@ def analyze_cdr_night_calls(datasets: list[dict[str, Any]], start_hour: int = 22
     }
 
 
-def analyze_cdr_pair_history(datasets: list[dict[str, Any]], entity_a: str, entity_b: str) -> dict[str, Any]:
+def analyze_cdr_pair_history(
+    datasets: list[dict[str, Any]],
+    entity_a: str,
+    entity_b: str,
+    *,
+    night_only: bool = False,
+    start_hour: int = 22,
+    end_hour: int = 6,
+) -> dict[str, Any]:
+    return analyze_cdr_pair_history_filtered(
+        datasets,
+        entity_a,
+        entity_b,
+        night_only=night_only,
+        start_hour=start_hour,
+        end_hour=end_hour,
+    )
+
+
+def analyze_cdr_pair_history_filtered(
+    datasets: list[dict[str, Any]],
+    entity_a: str,
+    entity_b: str,
+    *,
+    night_only: bool = False,
+    start_hour: int = 22,
+    end_hour: int = 6,
+) -> dict[str, Any]:
     events: list[dict[str, Any]] = []
     duration_values: list[float] = []
     direction_counter: Counter[str] = Counter()
@@ -536,6 +562,11 @@ def analyze_cdr_pair_history(datasets: list[dict[str, Any]], entity_a: str, enti
             continue
         datasets_used.append(dataset["file_name"])
         subset["_ts"] = _coerce_datetime(subset[time_column]) if time_column else pd.NaT
+        subset = subset.dropna(subset=["_ts"]) if time_column else subset
+        if night_only and time_column:
+            subset = subset[subset["_ts"].dt.hour.map(lambda hour: _is_between_hours(int(hour), start_hour, end_hour))]
+        if subset.empty:
+            continue
         subset["_duration"] = pd.to_numeric(subset[duration_column], errors="coerce") if duration_column else pd.NA
         for _, row in subset.iterrows():
             if pd.notna(row["_duration"]):
@@ -564,10 +595,22 @@ def analyze_cdr_pair_history(datasets: list[dict[str, Any]], entity_a: str, enti
             "visualizations": {"relationship_table": []},
             "response_override": _response_override(
                 title=f"No Pair History: {entity_a} and {entity_b}",
-                direct_answer=f"No direct CDR calls were found between {entity_a} and {entity_b}.",
+                direct_answer=(
+                    f"No direct night-time CDR calls were found between {entity_a} and {entity_b}."
+                    if night_only
+                    else f"No direct CDR calls were found between {entity_a} and {entity_b}."
+                ),
                 supporting_data=[],
-                analysis="The pair filter did not match any source-target or target-source rows in the loaded CDR data.",
-                insight="The two entities do not appear as a direct call pair in the available data.",
+                analysis=(
+                    "The pair filter did not match any source-target or target-source rows inside the requested night window."
+                    if night_only
+                    else "The pair filter did not match any source-target or target-source rows in the loaded CDR data."
+                ),
+                insight=(
+                    "The two entities do not appear as a direct night-time call pair in the available data."
+                    if night_only
+                    else "The two entities do not appear as a direct call pair in the available data."
+                ),
                 recommended_action="Confirm both numbers and retry, or inspect each number separately.",
             ),
         }
@@ -578,17 +621,32 @@ def analyze_cdr_pair_history(datasets: list[dict[str, Any]], entity_a: str, enti
     if top_hours:
         analysis_text += " Peak hours: " + ", ".join(f"{hour:02d}:00 ({count})" for hour, count in top_hours) + "."
     insight_text = f"The pair shows repeated contact across {len(daily_counter)} distinct day(s)."
+    distinct_dates = sorted(pd.to_datetime(list(daily_counter.keys()), errors="coerce").dropna().tolist())
+    consecutive_span = False
+    if distinct_dates:
+        min_date = min(distinct_dates)
+        max_date = max(distinct_dates)
+        consecutive_span = (max_date - min_date).days + 1 == len(distinct_dates)
+    alerts: list[str] = []
+    if consecutive_span and len(daily_counter) >= 5:
+        alerts.append(f"{entity_a} and {entity_b} have contact on {len(daily_counter)} consecutive day(s).")
+    elif len(events) >= 10:
+        alerts.append(f"{entity_a} and {entity_b} have repeated direct contact.")
     return {
         "pair_history": events[:50],
         "direction_counts": [{"direction": key, "count": value} for key, value in direction_counter.items()],
         "daily_counts": [{"date": key, "count": value} for key, value in daily_counter.items()],
         "datasets_used": datasets_used,
         "leads": [f"{entity_a} and {entity_b} are a repeated call pair with {len(events)} matched records."],
-        "alerts": [f"{entity_a} and {entity_b} have daily contact." ] if len(daily_counter) >= 5 else [],
+        "alerts": alerts,
         "visualizations": {"relationship_table": [{"label": key, "value": value} for key, value in direction_counter.items()]},
         "response_override": _response_override(
-            title=f"Pair History: {entity_a} and {entity_b}",
-            direct_answer=f"{entity_a} and {entity_b} have {len(events)} direct call records.",
+            title=f"{'Night ' if night_only else ''}Pair History: {entity_a} and {entity_b}",
+            direct_answer=(
+                f"{entity_a} and {entity_b} have {len(events)} direct night-time call records."
+                if night_only
+                else f"{entity_a} and {entity_b} have {len(events)} direct call records."
+            ),
             supporting_data=[
                 f"Dominant direction: {top_direction[0]} ({top_direction[1]} calls)",
                 _duration_summary(duration_values),
@@ -599,6 +657,76 @@ def analyze_cdr_pair_history(datasets: list[dict[str, Any]], entity_a: str, enti
             recommended_action="Review the exact call dates, duration spikes, and same-day tower activity for both numbers.",
             focus_entity=entity_a,
             suggestions=["Show day-by-day pattern", "Show their tower co-location", "Build complete profile"],
+        ),
+    }
+
+
+def trace_ip_activity_across_datasets(datasets: list[dict[str, Any]], limit: int = 5) -> dict[str, Any]:
+    sessions = _extract_ipdr_rows(datasets)
+    if not sessions:
+        return {
+            "ip_activity_ranking": [],
+            "datasets_used": [],
+            "leads": [],
+            "alerts": [],
+            "visualizations": {"relationship_table": []},
+            "response_override": _response_override(
+                title="Cross-Dataset IP Activity",
+                direct_answer="No IPDR activity was found in the loaded case data.",
+                supporting_data=[],
+                analysis="This query needs IPDR data with subscriber or device activity tied to IP records.",
+                insight="Upload IPDR data to trace internet activity across the case datasets.",
+                recommended_action="Add IPDR files or ask about phone-number or call analysis instead.",
+            ),
+        }
+
+    entity_summary: dict[str, dict[str, Any]] = defaultdict(lambda: {"session_count": 0, "ip_values": set(), "ipdr_files": set()})
+    common_entities = find_common_entities_bridge(datasets).get("common_entities", [])
+    common_lookup = {item["value"]: item for item in common_entities}
+
+    for row in sessions:
+        bucket = entity_summary[row["entity"]]
+        bucket["session_count"] += 1
+        if row["ip_address"]:
+            bucket["ip_values"].add(row["ip_address"])
+        bucket["ipdr_files"].add(row["file_name"])
+
+    ranking: list[dict[str, Any]] = []
+    for entity, stats in entity_summary.items():
+        file_count = common_lookup.get(entity, {}).get("file_count", len(stats["ipdr_files"]))
+        ranking.append(
+            {
+                "value": entity,
+                "session_count": int(stats["session_count"]),
+                "distinct_ips": len(stats["ip_values"]),
+                "file_count": int(file_count),
+            }
+        )
+
+    ranking.sort(key=lambda item: (-item["file_count"], -item["session_count"], -item["distinct_ips"], item["value"]))
+    top = ranking[0] if ranking else None
+    return {
+        "ip_activity_ranking": ranking[:limit],
+        "datasets_used": sorted({row["file_name"] for row in sessions}),
+        "leads": [f"{top['value']} has the strongest combined IP activity and cross-dataset presence."] if top else [],
+        "alerts": [],
+        "visualizations": {"relationship_table": [{"label": item["value"], "value": item["session_count"]} for item in ranking[:limit]]},
+        "response_override": _response_override(
+            title=f"Cross-Dataset IP Activity: {top['value']}" if top else "Cross-Dataset IP Activity",
+            direct_answer=(
+                f"{top['value']} has {top['session_count']} IPDR session(s), {top['distinct_ips']} distinct IPs, and appears in {top['file_count']} dataset(s)."
+                if top
+                else "No IP activity could be ranked."
+            ),
+            supporting_data=[
+                f"{item['value']}: {item['session_count']} IPDR session(s), {item['distinct_ips']} IPs, {item['file_count']} dataset(s)"
+                for item in ranking[:limit]
+            ],
+            analysis="The ranking combines IPDR session count, distinct IP values, and cross-dataset presence for the same entity.",
+            insight=f"{top['value']} is the strongest IP-activity anchor across the loaded datasets." if top else "The loaded data does not support cross-dataset IP tracing yet.",
+            recommended_action="Open the top entity profile and compare IP activity with calls and tower movement in the same period.",
+            focus_entity=top["value"] if top else None,
+            suggestions=["Build complete profile", "Show suspicious IPs", "Show their night activity"],
         ),
     }
 

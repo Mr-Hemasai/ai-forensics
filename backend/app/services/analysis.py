@@ -3,9 +3,10 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from statistics import median
 from typing import Any, Optional
-import warnings
 
 import pandas as pd
+
+from app.services.datetime_utils import coerce_datetime
 
 
 ENTITY_TYPES = {"phone_number", "ip_address", "imei", "imsi", "device_id", "user_id", "tower_id", "location_label"}
@@ -22,9 +23,7 @@ SEMANTIC_PRIORITY = {
 
 
 def _coerce_datetime(series: pd.Series) -> pd.Series:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        return pd.to_datetime(series, errors="coerce")
+    return coerce_datetime(series)
 
 
 def _dataset_profiles(dataset: dict[str, Any]) -> list[dict[str, Any]]:
@@ -125,6 +124,45 @@ def analyze_frequency(datasets: list[dict[str, Any]], limit: int = 10) -> dict[s
     top_entities = [{"value": value, "count": count} for value, count in global_counter.most_common(limit)]
     chart = [{"label": item["value"], "value": item["count"]} for item in top_entities[:8]]
     return {"top_entities": top_entities, "per_file": per_file, "visualizations": {"frequency_chart": chart}}
+
+
+def analyze_phone_number_frequency(datasets: list[dict[str, Any]], limit: int = 10) -> dict[str, Any]:
+    global_counter: Counter[str] = Counter()
+    datasets_used: list[str] = []
+
+    for dataset in datasets:
+        df: pd.DataFrame = dataset["dataframe"]
+        phone_profiles = _profiles_by_semantic(dataset, {"phone_number"})
+        if not phone_profiles:
+            continue
+        datasets_used.append(dataset["file_name"])
+        for profile in phone_profiles:
+            values = _clean_values(df, profile["column"])
+            global_counter.update(values.tolist())
+
+    ranking = [{"value": value, "count": count} for value, count in global_counter.most_common(limit)]
+    top = ranking[0] if ranking else None
+    return {
+        "top_phone_numbers": ranking,
+        "datasets_used": datasets_used,
+        "leads": [f"{top['value']} is the most active phone number in the loaded case data."] if top else [],
+        "alerts": [],
+        "visualizations": {"frequency_chart": [{"label": item["value"], "value": item["count"]} for item in ranking[:8]]},
+        "response_override": {
+            "title": f"Top Phone Number: {top['value']}" if top else "Phone Number Ranking",
+            "direct_answer": f"{top['value']} has the highest phone-number activity with {top['count']} records." if top else "No phone-number fields were found in the loaded datasets.",
+            "supporting_data": [f"{item['value']}: {item['count']} records" for item in ranking[:8]],
+            "analysis": (
+                f"This ranking uses only columns classified as phone numbers. {top['value']} is ahead of {ranking[1]['value']} by {top['count'] - ranking[1]['count']} records."
+                if len(ranking) > 1
+                else "This ranking uses only columns classified as phone numbers."
+            ),
+            "insight": f"{top['value']} is the strongest phone-number anchor in the current case." if top else "Upload telecom data with phone-number columns to run this analysis.",
+            "recommended_action": "Check the top phone number's contacts, night activity, and cross-dataset presence.",
+            "focus_entity": top["value"] if top else None,
+            "suggestions": ["Who called that number?", "Show their night activity", "Find common entities across datasets"],
+        },
+    }
 
 
 def detect_time_patterns(datasets: list[dict[str, Any]], night_start: int = 0, night_end: int = 5) -> dict[str, Any]:

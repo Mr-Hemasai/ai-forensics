@@ -7,6 +7,8 @@ from typing import Any
 
 import pandas as pd
 
+from app.services.datetime_utils import coerce_datetime
+
 
 PHONE_PATTERN = re.compile(r"^\+?\d{10,15}$")
 IPV4_PATTERN = re.compile(r"^(?:\d{1,3}\.){3}\d{1,3}$")
@@ -104,7 +106,7 @@ def _datetime_ratio(series: pd.Series, column_name: str) -> float:
         return 0.0
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        parsed = pd.to_datetime(values, errors="coerce")
+        parsed = coerce_datetime(values)
     return round(parsed.notna().mean(), 3)
 
 
