@@ -1,5 +1,8 @@
-import { Download, FileClock, FolderSearch2, Trash2, UploadCloud } from "lucide-react";
+import { Download, ExternalLink, FileClock, FolderSearch2, Trash2, UploadCloud } from "lucide-react";
 import { VisualizationPanel } from "./VisualizationPanel";
+
+
+const SAMPLE_DATASET_URL = "https://drive.google.com/drive/folders/1fYdddOF-W7Y0sSUzf98Y6wlPjJ8mknJe?usp=sharing";
 
 function Section({ title, children, footer }) {
   return (
@@ -86,18 +89,30 @@ export function RightPanel({
           </button>
         }
       >
-        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100 hover:bg-cyan-400/20">
-          <UploadCloud size={16} />
-          {uploading ? "Uploading..." : "Upload Datasets"}
-          <input
-            type="file"
-            multiple
-            accept=".csv,.xlsx,.xls"
-            className="hidden"
-            onChange={(event) => onUpload(Array.from(event.target.files || []))}
-            disabled={!activeCase || uploading}
-          />
-        </label>
+        <div className="space-y-3">
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100 hover:bg-cyan-400/20">
+            <UploadCloud size={16} />
+            {uploading ? "Uploading..." : "Upload Datasets"}
+            <input
+              type="file"
+              multiple
+              accept=".csv,.xlsx,.xls"
+              className="hidden"
+              onChange={(event) => onUpload(Array.from(event.target.files || []))}
+              disabled={!activeCase || uploading}
+            />
+          </label>
+
+          <a
+            href={SAMPLE_DATASET_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200 transition hover:bg-white/10"
+          >
+            <span>Download Sample Datasets</span>
+            <ExternalLink size={15} className="text-slate-400" />
+          </a>
+        </div>
       </Section>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
