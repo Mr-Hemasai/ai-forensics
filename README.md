@@ -1,162 +1,277 @@
-# AI Chatbot for Forensic Analysis of Telecom & Digital Data
+AI Chatbot for Forensic Analysis of Telecom & Digital Data
 
-Chat-first, case-based forensic analysis platform for telecom and digital datasets. The project is built as a hackathon-ready prototype with a React frontend and a FastAPI backend.
+A chat-first forensic intelligence platform for analyzing telecom and digital investigation datasets using contextual AI-assisted workflows.
 
-It supports:
+Built as a lightweight full-stack prototype using React and FastAPI, the system helps investigators explore large structured datasets such as CDRs, tower dumps, and IPDR logs through conversational querying, cross-dataset analytics, and investigation-oriented insights.
 
-- isolated investigation cases
-- multi-file CSV/Excel upload per case
-- dynamic schema understanding for telecom and digital evidence
-- context-aware conversational querying
-- specialized CDR, tower, IPDR, and cross-dataset analytics
-- structured investigator-style answers
-- lightweight visualizations
-- DOCX report generation
+⸻
 
-## Current Scope
+Overview
 
-This is not a production system. It is a working prototype designed for:
+Traditional forensic analysis workflows are heavily manual and fragmented across spreadsheets, static filters, and disconnected tools.
 
-- demos
-- hackathons
-- investigator workflow simulation
-- explainable forensic analysis
+This project explores a more interactive investigation workflow where investigators can:
 
-It keeps everything in memory and avoids heavy infrastructure.
+* upload multiple datasets into isolated cases
+* query evidence conversationally
+* perform dataset-specific analytics
+* reconstruct timelines and relationships
+* generate structured investigation summaries
+* synthesize findings across telecom and digital evidence
 
-## Key Features
+The system is designed as a prototype for:
 
-### Case-Based Investigation Workspace
+* hackathons
+* workflow experimentation
+* explainable investigation systems
+* AI-assisted forensic tooling demos
 
-- Create multiple cases
-- Keep datasets, chat history, and context isolated per case
-- Switch cases without data overlap
+It is intentionally lightweight:
 
-### Universal Dataset Handling
+* no database
+* no heavy infrastructure
+* all datasets stored in memory
+* AI optional for response formatting only
 
-The backend accepts structured telecom and digital datasets such as:
+⸻
 
-- CDR
-- Tower Dump
-- IPDR
-- other CSV/Excel files with numbers, timestamps, IDs, IPs, and location fields
+Key Features
 
-It automatically classifies columns into categories like:
+Case-Based Investigation Workspace
 
-- entity
-- relationship
-- time
-- location
-- metric
-- network
+* Create and manage multiple investigation cases
+* Maintain isolated datasets and conversational context per case
+* Switch between investigations without data overlap
 
-### Context-Aware Chatbot
+Each case preserves:
 
-The chatbot maintains per-case conversational context:
+* uploaded datasets
+* query history
+* contextual investigation state
+* generated findings
 
-- `last_entity`
-- `last_intent`
-- `last_query_type`
-- `last_dataset_used`
+⸻
 
-This allows follow-up questions such as:
+Universal Dataset Handling
 
-- `to whom`
-- `show their night activity`
-- `who contacted that number`
+The backend supports structured telecom and digital evidence datasets including:
 
-### Specialized Forensic Analytics
+* CDR (Call Detail Records)
+* Tower Dumps
+* IPDR (Internet Protocol Detail Records)
+* Generic CSV/Excel datasets
 
-The backend now includes dataset-specific analytics:
+The ingestion pipeline automatically classifies columns into categories such as:
 
-#### CDR
+* entity
+* relationship
+* time
+* location
+* network
+* metric
 
-- outgoing call counts by caller
-- incoming call analysis by receiver
-- exact pair history with timestamps and durations
-- night-call analysis
-- day-by-day and weekday pattern detection
-- burner-style short-window profile analysis
+This allows flexible querying even across partially inconsistent datasets.
 
-#### Tower
+⸻
 
-- highest-hit towers
-- co-location within configurable time windows
-- movement reconstruction
-- location spread scoring
+Context-Aware Conversational Querying
 
-#### IPDR
+The chatbot maintains investigation context per case using:
 
-- VPN usage detection
-- TOR / dark-web indicator detection
-- encrypted messaging app classification
-- suspicious IP / suspicious host matching
-- upload/download anomaly checks
-- burner-style IPDR profile analysis
+* last_entity
+* last_intent
+* last_query_type
+* last_dataset_used
 
-#### Cross-Dataset
+This enables natural follow-up queries such as:
 
-- common entities across datasets
-- stitched multi-dataset event timelines
-- entity profile synthesis
-- critical-window reconstruction
+Show their night activity
+Who contacted that number?
+Was the same suspect seen near this tower?
+Build a profile using all datasets
 
-#### Investigation Synthesis
+The goal is to simulate investigator-style iterative analysis rather than simple one-shot querying.
 
-- role scoring
-- hierarchy inference
-- evidence ranking
-- final action summary
-- counter-surveillance summary
+⸻
 
-## Frontend
+Specialized Forensic Analytics
 
-The UI uses a fixed-screen 3-panel layout:
+CDR Analytics
 
-- left sidebar: case control and observation box
-- center panel: chat-first investigation UI
-- right sidebar: upload, datasets, visuals, query history, and report action
+* outgoing/incoming call analysis
+* pairwise communication history
+* timestamp and duration analysis
+* night-call detection
+* weekday pattern analysis
+* burner-style short-window behavior detection
 
-Current UX features:
+⸻
 
-- internal panel scrolling only
-- fixed chat input at the bottom
-- single-row smart suggestion chips
-- loading indicators
-- query history replay
-- last two relevant visualizations only
+Tower Dump Analytics
 
-## Backend API
+* highest-hit tower detection
+* co-location analysis
+* movement reconstruction
+* geographic spread scoring
+* temporal overlap analysis
 
-### Core Endpoints
+⸻
 
-- `POST /case/create`
-- `GET /case/list`
-- `GET /case/{case_id}`
-- `POST /upload`
-- `POST /query`
-- `DELETE /dataset`
+IPDR Analytics
 
-### Investigation Utilities
+* VPN usage detection
+* TOR/dark-web indicators
+* encrypted messaging app identification
+* suspicious IP/domain matching
+* upload/download anomaly checks
+* burner-style network profiling
 
-- `GET /entity/drilldown`
-- `GET /timeline`
-- `GET /report/generate`
-- `GET /health`
+⸻
 
-## Main Backend Modules
+Cross-Dataset Intelligence
 
-- [backend/app/services/data_loader.py](/Users/hemasai/Documents/AIFOrnsic/backend/app/services/data_loader.py)
-- [backend/app/services/analysis.py](/Users/hemasai/Documents/AIFOrnsic/backend/app/services/analysis.py)
-- [backend/app/services/forensic_analytics.py](/Users/hemasai/Documents/AIFOrnsic/backend/app/services/forensic_analytics.py)
-- [backend/app/services/intent.py](/Users/hemasai/Documents/AIFOrnsic/backend/app/services/intent.py)
-- [backend/app/services/query_engine.py](/Users/hemasai/Documents/AIFOrnsic/backend/app/services/query_engine.py)
-- [backend/app/services/response_builder.py](/Users/hemasai/Documents/AIFOrnsic/backend/app/services/response_builder.py)
-- [backend/app/services/reporting.py](/Users/hemasai/Documents/AIFOrnsic/backend/app/services/reporting.py)
+* entity correlation across datasets
+* unified timeline reconstruction
+* profile synthesis
+* critical-window investigation reconstruction
+* evidence stitching
 
-## Folder Structure
+⸻
 
-```text
+Investigation Synthesis
+
+The system can generate higher-level investigative summaries including:
+
+* role scoring
+* hierarchy inference
+* evidence ranking
+* counter-surveillance indicators
+* final action summaries
+
+⸻
+
+Frontend
+
+The frontend uses a fixed-screen 3-panel investigation layout.
+
+Layout Structure
+
+Left Sidebar
+
+* case management
+* observation notes
+* investigation controls
+
+Center Panel
+
+* conversational investigation interface
+* contextual chat workflows
+* smart suggestions
+
+Right Sidebar
+
+* dataset uploads
+* analytics visualizations
+* query history
+* report generation
+
+⸻
+
+UX Features
+
+* fixed chat input
+* internal panel scrolling
+* contextual suggestion chips
+* lightweight visualizations
+* loading indicators
+* query replay support
+* recent visualization tracking
+
+⸻
+
+Backend Architecture
+
+Core API Endpoints
+
+Case Management
+
+POST /case/create
+GET /case/list
+GET /case/{case_id}
+
+Dataset Operations
+
+POST /upload
+DELETE /dataset
+
+Query & Analysis
+
+POST /query
+GET /timeline
+GET /entity/drilldown
+
+Reporting
+
+GET /report/generate
+
+System
+
+GET /health
+
+⸻
+
+Core Backend Modules
+
+backend/app/services/
+├── analysis.py
+├── data_loader.py
+├── forensic_analytics.py
+├── intent.py
+├── query_engine.py
+├── reporting.py
+└── response_builder.py
+
+⸻
+
+High-Level Architecture
+
+Frontend (React)
+        ↓
+FastAPI Backend
+        ↓
+Intent Detection Layer
+        ↓
+Query Engine
+        ↓
+Forensic Analytics Engine
+        ↓
+Response Builder / Reporting
+
+⸻
+
+Tech Stack
+
+Frontend
+
+* React
+* Vite
+* JavaScript
+* CSS
+
+Backend
+
+* FastAPI
+* Pandas
+* Python
+
+Optional AI Layer
+
+* OpenRouter/OpenAI-compatible APIs
+
+⸻
+
+Folder Structure
+
 AIFOrnsic/
 ├── PROJECT_REPORT.md
 ├── README.md
@@ -175,107 +290,152 @@ AIFOrnsic/
     │   └── lib/
     ├── package.json
     └── README.md
-```
 
-## Run Locally
+⸻
 
-### 1. Backend
+Run Locally
 
-```bash
-cd /Users/hemasai/Documents/AIFOrnsic/backend
+1. Backend Setup
+
+cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python3 sample_data/generate_samples.py
 uvicorn app.main:app --reload --port 8000
-```
 
-Optional AI formatting:
+⸻
 
-```bash
+Optional AI Formatting Layer
+
 export AI_API_KEY=your_key
 export AI_BASE_URL=https://openrouter.ai/api/v1
 export AI_MODEL=openrouter/free
-```
 
-### 2. Frontend
+AI is optional and used only for:
 
-```bash
-cd /Users/hemasai/Documents/AIFOrnsic/frontend
+* wording refinement
+* response formatting
+* structured investigator summaries
+
+Core analytics are rule-based and implemented with pandas.
+
+⸻
+
+2. Frontend Setup
+
+cd frontend
 npm install
 echo "VITE_API_BASE_URL=http://localhost:8000" > .env
 npm run dev
-```
 
-## Example Queries
+⸻
 
-### General
+Example Investigation Queries
 
-- `Show most active entities`
-- `Find suspicious activity`
-- `Who appears across multiple datasets?`
-- `Show their night activity`
+General Queries
 
-### CDR
+Show most active entities
+Find suspicious activity
+Who appears across multiple datasets?
+Show their night activity
 
-- `Which phone number made the most calls overall?`
-- `Who called 9824942603 and how many times?`
-- `Show all calls between 9895822412 and 9824942603`
-- `Identify all calls made between 10PM and 6AM`
+⸻
 
-### Tower
+CDR Queries
 
-- `Which towers had the highest number of hits?`
-- `Were 9895822412 and 9824942603 ever at the same tower at the same time?`
-- `Track 9895822412 physical movement across the investigation period`
-- `Which suspect has the widest geographic spread across towers?`
+Which phone number made the most calls overall?
+Who called 9824942603 and how many times?
+Show all calls between 9895822412 and 9824942603
+Identify all calls made between 10PM and 6AM
 
-### IPDR
+⸻
 
-- `Which subscribers are using VPN?`
-- `Was TOR used by any suspect?`
-- `Which suspects use encrypted messaging apps?`
-- `Identify all sessions with suspicious external IP addresses`
+Tower Queries
 
-### Cross-Dataset
+Which towers had the highest number of hits?
+Were 9895822412 and 9824942603 ever at the same tower?
+Track suspect movement across the investigation period
+Which suspect has the widest geographic spread?
 
-- `Build a complete profile of 9895822412 using all three datasets`
-- `Reconstruct a timeline of events for the critical window August 1-3`
-- `Which suspect is most likely the leader of the network?`
-- `Generate a final investigative summary`
+⸻
 
-## Sample Data
+IPDR Queries
 
-Generate demo datasets with:
+Which subscribers are using VPN?
+Was TOR used by any suspect?
+Which suspects use encrypted messaging apps?
+Identify sessions with suspicious external IP addresses
 
-```bash
-cd /Users/hemasai/Documents/AIFOrnsic/backend
+⸻
+
+Cross-Dataset Queries
+
+Build a complete profile using all datasets
+Reconstruct a timeline for the critical window
+Which suspect is most likely the leader?
+Generate a final investigative summary
+
+⸻
+
+Sample Data
+
+Generate demo datasets:
+
+cd backend
 python3 sample_data/generate_samples.py
-```
 
-Generated files:
+Generated demo files:
 
-- [backend/sample_data/cdr_sample.csv](/Users/hemasai/Documents/AIFOrnsic/backend/sample_data/cdr_sample.csv)
-- [backend/sample_data/tower_dump_sample.csv](/Users/hemasai/Documents/AIFOrnsic/backend/sample_data/tower_dump_sample.csv)
-- [backend/sample_data/ipdr_sample.csv](/Users/hemasai/Documents/AIFOrnsic/backend/sample_data/ipdr_sample.csv)
+backend/sample_data/cdr_sample.csv
+backend/sample_data/tower_dump_sample.csv
+backend/sample_data/ipdr_sample.csv
 
-These are simplified demo files. The richer forensic analytics become more useful when real uploaded datasets include:
+These are simplified datasets intended for testing workflows and analytics behavior.
 
-- domain/app fields in IPDR
-- city/location metadata in tower data
-- clearer suspect/alias labels
-- longer time windows
+⸻
 
-## Important Notes
+Current Limitations
 
-- All core calculations are done with pandas
-- AI is optional and used only for wording/formatting
-- Data is stored in memory only
-- No database is used
-- Frontend and backend are intentionally lightweight
+This is a prototype system and currently has several limitations:
 
-## Documentation
+* datasets stored entirely in memory
+* no authentication or RBAC
+* no persistent database
+* limited scalability
+* lightweight visualization layer
+* simplified forensic heuristics
 
-- Full report: [PROJECT_REPORT.md](/Users/hemasai/Documents/AIFOrnsic/PROJECT_REPORT.md)
-- Backend notes: [backend/README.md](/Users/hemasai/Documents/AIFOrnsic/backend/README.md)
-- Frontend notes: [frontend/README.md](/Users/hemasai/Documents/AIFOrnsic/frontend/README.md)
+The focus is experimentation and workflow simulation rather than production deployment.
+
+⸻
+
+Future Improvements
+
+Potential next steps include:
+
+* vector-based contextual retrieval
+* graph database integration
+* persistent case memory
+* multi-agent investigation workflows
+* advanced visualization dashboards
+* streaming analytics
+* collaborative investigations
+* evidence chain management
+* deployment-ready infrastructure
+
+⸻
+
+Documentation
+
+Additional documentation:
+
+* PROJECT_REPORT.md
+* backend/README.md
+* frontend/README.md
+
+⸻
+
+License
+
+Prototype project for educational, research, and demonstration purposes.
